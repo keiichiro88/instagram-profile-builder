@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { callGeminiWithRetry, parseJsonResponse, countDisplayWidth } from "@/lib/gemini-helpers";
 import { MODEL_PRO } from "@/lib/gemini";
 import type { ProfileResult, ProfileLine } from "@/lib/types";
+import { rateLimitGuard, MAX_TEXT_LENGTH } from "@/lib/api-validation";
 
 export async function POST(req: NextRequest) {
+  const rl = rateLimitGuard(req, 10, 60_000); // 10 req/min for Pro model (costlier)
+  if (rl) return rl;
+
   try {
     const body = await req.json();
     const { phase, accountName, selectedCombination, trust, genre, screenshotAnalysis } = body;
@@ -16,6 +20,16 @@ export async function POST(req: NextRequest) {
         },
         { status: 400 },
       );
+    }
+
+    // Validate input lengths
+    for (const val of [accountName, genre, selectedCombination, trust.motivation, trust.struggle, trust.targetPerson, trust.futureVision]) {
+      if (typeof val === "string" && val.length > MAX_TEXT_LENGTH) {
+        return NextResponse.json(
+          { error: "Input too long" },
+          { status: 400 },
+        );
+      }
     }
 
     const phaseInstructions =

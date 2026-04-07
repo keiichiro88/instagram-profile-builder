@@ -1,32 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callGeminiWithRetry, parseJsonResponse } from "@/lib/gemini-helpers";
 import { MODEL_FLASH } from "@/lib/gemini";
+import { rateLimitGuard, validateImageDataUrl } from "@/lib/api-validation";
 
 export async function POST(req: NextRequest) {
+  const rl = rateLimitGuard(req, 10, 60_000); // 10 req/min for image analysis
+  if (rl) return rl;
+
   try {
     const body = await req.json();
     const { image, genre } = body;
 
-    if (!image) {
-      return NextResponse.json(
-        { error: "image is required" },
-        { status: 400 },
-      );
-    }
+    const imgResult = validateImageDataUrl(image);
+    if (imgResult instanceof NextResponse) return imgResult;
 
-    // Extract base64 data from data URL
-    const match = (image as string).match(
-      /^data:(image\/\w+);base64,(.+)$/,
-    );
-    if (!match) {
-      return NextResponse.json(
-        { error: "Invalid image format. Please upload a PNG or JPEG." },
-        { status: 400 },
-      );
-    }
-
-    const mimeType = match[1];
-    const base64Data = match[2];
+    const { mimeType, base64: base64Data } = imgResult;
 
     const prompt = `あなたはInstagramプロフィール分析の専門家です。このスクリーンショットはユーザーの現在のInstagramプロフィール画面です。
 

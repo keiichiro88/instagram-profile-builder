@@ -1,17 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callGeminiWithRetry, parseJsonResponse, countDisplayWidth } from "@/lib/gemini-helpers";
 import { MODEL_FLASH } from "@/lib/gemini";
+import { rateLimitGuard, validateString } from "@/lib/api-validation";
 
 export async function POST(req: NextRequest) {
+  const rl = rateLimitGuard(req);
+  if (rl) return rl;
+
   try {
     const body = await req.json();
     const { preferredName, searchKeywords, selectedCombination, genre } = body;
 
-    if (!preferredName || !searchKeywords || !genre) {
-      return NextResponse.json(
-        { error: "preferredName, searchKeywords, and genre are required" },
-        { status: 400 },
-      );
+    for (const [key, val] of Object.entries({ preferredName, searchKeywords, genre })) {
+      const result = validateString(val, key, 200);
+      if (result instanceof NextResponse) return result;
     }
 
     const prompt = `あなたはInstagramアカウント名の設計専門家です。「名前+何者か」のフォーマットに従って、3つのアカウント名パターンを生成してください。

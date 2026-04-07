@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callGeminiWithRetry, parseJsonResponse } from "@/lib/gemini-helpers";
 import { MODEL_FLASH } from "@/lib/gemini";
+import { rateLimitGuard } from "@/lib/api-validation";
 
 export async function POST(req: NextRequest) {
+  const rl = rateLimitGuard(req);
+  if (rl) return rl;
+
   try {
     const body = await req.json();
     const { showFace, impressions, imageColor, genre, combination } = body;

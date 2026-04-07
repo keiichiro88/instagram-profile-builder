@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callGeminiWithRetry, parseJsonResponse } from "@/lib/gemini-helpers";
 import { MODEL_FLASH } from "@/lib/gemini";
+import { rateLimitGuard, validateString, MAX_TEXT_LENGTH } from "@/lib/api-validation";
 
 export async function POST(req: NextRequest) {
+  const rl = rateLimitGuard(req);
+  if (rl) return rl;
+
   try {
     const body = await req.json();
     const { inventory, genre } = body;
@@ -12,6 +16,17 @@ export async function POST(req: NextRequest) {
         { error: "inventory and genre are required" },
         { status: 400 },
       );
+    }
+
+    // Validate input lengths
+    for (const key of ["job", "jobYears", "strengths", "praised", "hobbies", "hardship", "unique"]) {
+      const val = inventory[key];
+      if (typeof val === "string" && val.length > MAX_TEXT_LENGTH) {
+        return NextResponse.json(
+          { error: `${key} is too long (max ${MAX_TEXT_LENGTH} chars)` },
+          { status: 400 },
+        );
+      }
     }
 
     const prompt = `あなたはSNSブランディングの専門家です。ユーザーのスキルと経験を分析して、「100人に1人」のユニークな組み合わせパターンを見つけてください。
