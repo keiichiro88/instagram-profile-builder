@@ -18,5 +18,11 @@
 - 実際のGemini生成とブラウザでの音声入力・保存の全操作は未実施。
 - Vercel管理Node.jsの細かな修正版反映は未確定。
 
+## 本番反映結果
+- 修正コミット fb25da5。GitHub mainと専用修正ブランチへ保存。
+- dpl_7SK8HQRLPdtx66ggvYN8GeZo4hvn をinstagram-profile-builder.vercel.appへ昇格。
+- 本番トップ200、昇格前の本番設定ビルドで入力不足の棚卸し/画像APIは400。Gemini生成は呼び出していない。
+- 復旧先 dpl_3CQbTqgEUGcvmbhuoi7gYejZkfGC を保持。
+
 ## 次
-- 本番用の事前ビルドと不正入力の拒否を確認後、旧デプロイを復旧先として保持し公開を切り替える。
+- Vercel管理Node.js反映完了と、実ユーザーの生成・保存操作を確認する。
